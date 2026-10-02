@@ -4,7 +4,7 @@
 
 Текущая версия: **2.1.0**, сборка **30**.
 
-[Скачать DMG](https://github.com/Atlantik56/MacUSBStudio/releases/download/v2.1.0/Mac.USB.Studio-2.1.0.dmg) · [Установка по шагам со скриншотами](docs/INSTALLATION.md) · [Релиз](https://github.com/Atlantik56/MacUSBStudio/releases/latest) · [История изменений](CHANGELOG.md) · [Результаты проверок](VALIDATION.md)
+[Скачать DMG](https://github.com/Atlantik56/MacUSBStudio/releases/download/v2.1.0/Mac.USB.Studio-2.1.0.dmg) · [Скачать SH для Terminal](https://github.com/Atlantik56/MacUSBStudio/releases/download/v2.1.0/Install-Mac-USB-Studio-2.1.0.sh) · [Установка по шагам со скриншотами](docs/INSTALLATION.md) · [Релиз](https://github.com/Atlantik56/MacUSBStudio/releases/latest) · [История изменений](CHANGELOG.md) · [Результаты проверок](VALIDATION.md)
 
 ## Что реализовано
 
@@ -23,7 +23,9 @@
 
 ## Установка и запуск для коллег
 
-Единственный готовый формат установки — **DMG**. Откройте образ и перетащите `Mac USB Studio` на ярлык `Applications` («Программы»). Затем откройте приложение из «Программ». Terminal для установки и работы не нужен.
+Основной формат установки — **DMG**. Откройте образ и перетащите `Mac USB Studio` на ярлык `Applications` («Программы»). Затем откройте приложение из «Программ». Для этого способа Terminal не нужен.
+
+Дополнительно есть **[самостоятельный SH-установщик](docs/TERMINAL-INSTALL.md)**. Скачайте его браузером и запустите через `/bin/bash` в Terminal. Он скачает фиксированный DMG, проверит SHA-256 и подписи, установит приложение в `~/Applications` и откроет его. Пароль администратора для этой установки не нужен; прежняя копия сохранится. Двойной щелчок по `.sh` не гарантирует запуск в Terminal.
 
 **Developer ID и нотарификации Apple нет.** При первом запуске macOS может заблокировать приложение. Закройте предупреждение кнопкой «Готово» или «OK», откройте «Системные настройки» → «Конфиденциальность и безопасность», прокрутите до раздела «Безопасность» и нажмите **«Все равно открыть»** рядом с сообщением о **Mac USB Studio**. Подтвердите «Открыть»; если macOS спросит пароль или Touch ID, подтвердите в системном окне. Это разрешение относится к конкретному приложению. [Объяснение Apple](https://support.apple.com/ru-ru/102445).
 
@@ -96,7 +98,9 @@ python3 Tests/DMG.py dist/Mac.USB.Studio-2.1.0.dmg "build/Mac USB Studio.app"
 | `Sources/Ejection.swift` | Проверка и безопасное извлечение записанного USB |
 | `Sources/System.swift` | Системные утилиты, подписи и проверки установщика |
 | `dmg.sh` | DMG с приложением и ярлыком «Программы» |
+| `install.sh` | Самостоятельный SH-установщик фиксированного релиза для Terminal |
 | `docs/INSTALLATION.md` | Пошаговая установка и первый запуск со скриншотами |
+| `docs/TERMINAL-INSTALL.md` | Скачивание SH в браузере и запуск в Terminal |
 | `Tests/` | Автоматические и интеграционные проверки |
 
 Скачанные установщики хранятся в `~/Library/Application Support/Mac USB Studio/downloads`, состояние интерфейса — в `clean-v2` внутри той же папки. Журналы и подготовленные задания находятся в `/private/tmp/mac-usb-studio2-…`.
