@@ -1,5 +1,5 @@
 #!/bin/bash
-# Installs the fixed public release for the current user. No global Gatekeeper changes.
+# Installs the fixed release from a direct HTTPS download without changing quarantine.
 set -euo pipefail
 export LC_ALL=C
 
@@ -27,9 +27,10 @@ usage() {
   bash install.sh --archive FILE          Использовать сохранённый ZIP того же релиза
   bash install.sh --destination DIR       Выбрать абсолютный путь папки установки
 
-Скрипт проверяет SHA-256 и локальные ad-hoc подписи. Только у установленной
-копии Mac USB Studio удаляется com.apple.quarantine. Это обход проверки
-происхождения Gatekeeper, а не подпись или нотарификация Apple.
+Скрипт проверяет SHA-256 и локальные ad-hoc подписи. Прямая загрузка через
+curl из Terminal не использует браузерный карантин. Скрипт не удаляет
+com.apple.quarantine: архив с этим атрибутом отклоняется без установки.
+Подписи Developer ID и нотарификации Apple у приложения пока нет.
 USAGE
 }
 cleanup() {
@@ -84,6 +85,11 @@ verify_app() {
   /usr/bin/codesign --verify --strict --all-architectures "$1" || fail 'Подпись приложения повреждена.'
   /usr/bin/codesign --verify --strict --all-architectures "$1/Contents/Helpers/MacUSBRecorder" || fail 'Подпись процесса записи повреждена.'
 }
+require_unquarantined() {
+  local task_attributes
+  task_attributes=$(/usr/bin/xattr -r "$1") || fail 'Не удалось проверить атрибуты скачанных файлов; установка остановлена.'
+  [[ "$task_attributes" != *com.apple.quarantine* ]] || fail 'Источник помечен карантином macOS. Атрибуты не изменены. Выполните команду прямой установки из README без выбора браузерного архива.'
+}
 version_greater() {
   local task_left task_right task_index task_l task_r
   IFS='.' read -r -a task_left <<< "$1"
@@ -111,7 +117,7 @@ check_target() {
 }
 
 printf 'Mac USB Studio %s (%s).\n' "$task_version" "$task_build"
-printf 'У этой копии приложения будет снят карантин скачанного файла; нотарификации Apple нет.\n'
+printf 'Прямая HTTPS-загрузка. Файлы с карантином не устанавливаются; атрибуты не снимаются.\n'
 task_temp=$(/usr/bin/mktemp -d /private/tmp/mac-usb-studio-download.XXXXXX)
 if [[ -z "$task_archive" ]]; then
   printf 'Скачивание фиксированного релиза с GitHub…\n'
@@ -125,11 +131,13 @@ fi
 task_actual_sha=$(/usr/bin/shasum -a 256 "$task_temp/release.zip")
 [[ "${task_actual_sha%% *}" == "$task_zip_sha" ]] || fail 'SHA-256 архива не совпадает с фиксированным релизом. Установка не запускалась.'
 printf 'SHA-256 подтверждён. Проверка приложения…\n'
+require_unquarantined "$task_temp/release.zip"
 /usr/bin/ditto -x -k "$task_temp/release.zip" "$task_temp/unpacked"
 task_source="$task_temp/unpacked/Mac USB Studio.app"
 verify_app "$task_source"
+require_unquarantined "$task_source"
 if [[ "$task_verify_only" -eq 1 ]]; then
-  printf 'Релиз %s (%s) проверен. Установка и снятие карантина не выполнялись.\n' "$task_version" "$task_build"
+  printf 'Релиз %s (%s) проверен. Установка не выполнялась; карантин не изменялся.\n' "$task_version" "$task_build"
   exit 0
 fi
 
@@ -146,8 +154,7 @@ check_target
 task_stage=$(/usr/bin/mktemp -d "$task_destination/.mac-usb-studio-install.XXXXXX")
 /usr/bin/ditto "$task_source" "$task_stage/Mac USB Studio.app"
 verify_app "$task_stage/Mac USB Studio.app"
-/usr/bin/xattr -dr com.apple.quarantine "$task_stage/Mac USB Studio.app" || fail 'Не удалось снять карантин с подготовленной копии.'
-verify_app "$task_stage/Mac USB Studio.app"
+require_unquarantined "$task_stage/Mac USB Studio.app"
 check_processes
 check_target
 if [[ -e "$task_target" ]]; then

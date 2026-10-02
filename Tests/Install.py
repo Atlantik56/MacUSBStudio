@@ -54,11 +54,11 @@ class InstallChecks(unittest.TestCase):
         self.assertFalse(list(self.destination.glob('.mac-usb-studio-install*')))
         self.assertFalse(list(self.destination.glob('Mac USB Studio.previous-*')))
 
-    def test_valid_install_and_scoped_quarantine(self):
-        subprocess.run(['/usr/bin/xattr', '-w', QUARANTINE, QUARANTINE_VALUE, str(self.archive)], check=True)
+    def test_valid_install_without_quarantine(self):
+        self.assertIsNone(self.quarantine(self.archive))
         result = self.install()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.quarantine(self.archive), QUARANTINE_VALUE)
+        self.assertIsNone(self.quarantine(self.archive))
         self.assertIsNone(self.quarantine(self.target))
         with zipfile.ZipFile(ARCHIVE) as archive:
             expected = {name.removeprefix('Mac USB Studio.app/'): hashlib.sha256(archive.read(name)).hexdigest()
@@ -69,6 +69,18 @@ class InstallChecks(unittest.TestCase):
         for path in self.target.rglob('*'):
             self.assertIsNone(self.quarantine(path), str(path))
         subprocess.run(['/usr/bin/codesign', '--verify', '--strict', '--all-architectures', str(self.target)], check=True)
+        self.assert_no_install_files()
+
+    def test_quarantined_archive_is_refused_and_preserved(self):
+        self.fake_app()
+        original = (self.target / 'Contents/Info.plist').read_bytes()
+        subprocess.run(['/usr/bin/xattr', '-w', QUARANTINE, QUARANTINE_VALUE, str(self.archive)], check=True)
+        result = self.install()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('помечен карантином', result.stderr)
+        self.assertEqual(self.quarantine(self.archive), QUARANTINE_VALUE)
+        self.assertEqual((self.target / 'Contents/Info.plist').read_bytes(), original)
+        self.assertEqual((self.target / 'keep.txt').read_text(), 'old application')
         self.assert_no_install_files()
 
     def test_bad_checksum_preserves_existing_app(self):
