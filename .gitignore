@@ -1,0 +1,10 @@
+build/
+.DS_Store
+*.dSYM/
+*.log
+*.app/
+*.zip
+*.pkg
+*.dmg
+__pycache__/
+*.pyc
