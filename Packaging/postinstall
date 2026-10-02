@@ -1,0 +1,20 @@
+#!/bin/bash
+# Installer runs this script as root. Open the GUI only with the console user's credentials.
+set -u
+task_app='/Applications/Mac USB Studio.app'
+if [[ "${3:-/}" != '/' || ! -d "$task_app" ]]; then
+  exit 0
+fi
+task_console_user=$(/usr/bin/stat -f '%Su' /dev/console)
+case "$task_console_user" in
+  ''|root|loginwindow|_mbsetupuser) exit 0 ;;
+esac
+task_console_uid=$(/usr/bin/id -u "$task_console_user" 2>/dev/null) || exit 0
+if [[ ! "$task_console_uid" =~ ^[0-9]+$ ]] || (( task_console_uid < 501 )); then
+  exit 0
+fi
+if ! /bin/launchctl asuser "$task_console_uid" /usr/bin/sudo -n -H -u "$task_console_user" \
+     /usr/bin/open -a "$task_app"; then
+  echo 'Mac USB Studio is installed. Open it from Applications.'
+fi
+exit 0
